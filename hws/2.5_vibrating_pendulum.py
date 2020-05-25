@@ -195,7 +195,7 @@ To complete this assignment, you only need to work in the following cell.
 """
 
 def pendulum_torque(m, g, l, theta, theta_dot, t):
-    torque = 0 # modify here
+    torque = m*l**2*(1-theta_dot) + m*g*l*np.sin(theta) - m*l*omega**2*h*np.sin(omega*t)*np.cos(theta) # modify here
     return torque
 
 """## Wire up the Block Diagram
