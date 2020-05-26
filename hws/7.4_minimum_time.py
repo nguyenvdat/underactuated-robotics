@@ -103,8 +103,8 @@ mesh = {}
 
 # number of knot points in the grids
 # odd to have a point in the origin
-mesh['n_q'] = 31 # do not exceed ~51/101
-mesh['n_qdot'] = 31 # do not exceed ~51/101
+mesh['n_q'] = 51 # do not exceed ~51/101
+mesh['n_qdot'] = 51 # do not exceed ~51/101
 mesh['n_u'] = 11  # don't exceed ~11/21
 
 # grid limits
@@ -458,15 +458,15 @@ def policy_closed_form(q, qdot, atol=1.e-2):
     
     # full-brake region
     # check if the state of the system is
-    # such that u must be set to -1
-    elif False: # modify here
-        return mesh['u_lim'][0]
+    # such that u must be set to 1
+    elif (qdot < 0 and q <= 1/2*qdot**2) or (qdot >= 0 and q < -1/2*qdot**2): # modify here
+        return mesh['u_lim'][1]
     
     # full-gas region
     # if all the others do not apply,
-    # u must be set to 1
+    # u must be set to -1
     else: # modify here
-        return mesh['u_lim'][1]
+        return mesh['u_lim'][0]
 
 """Now we just encapsulate the function you wrote in a Drake `VectorSystem` that can be sent to the simulator.
 Does this state trajectory and this control signal look more reasonable than the ones from the value-iteration algorithm? (Question not graded, do not submit.)
