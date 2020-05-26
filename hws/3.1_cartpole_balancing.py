@@ -71,10 +71,10 @@ def f(x, u):
         
     # fill the following matrix
     # (sorry for the one-base counting!)
-    f1 = 0 # modify here
-    f2 = 0 # modify here
-    f3 = 0 # modify here
-    f4 = 0 # modify here
+    f1 = x[2] # modify here
+    f2 = x[3] # modify here
+    f3 = 1/(1+s**2)*(u[0]+s*(x[3]**2+g*c)) # modify here
+    f4 = 1/(1+s**2)*(-u[0]*c - x[3]**2*c*s - 2*g*s) # modify here
     
     return np.array([f1, f2, f3, f4])
 
@@ -95,10 +95,10 @@ def get_A_lin():
     g = 9.81 # do not change
     # fill the matrix below
     A = np.array([
-        [0, 0, 0, 0], # modify here
-        [0, 0, 0, 0], # modify here
-        [0, 0, 0, 0], # modify here
-        [0, 0, 0, 0]  # modify here
+        [0, 0, 1, 0], # modify here
+        [0, 0, 0, 1], # modify here
+        [0, g, 0, 0], # modify here
+        [0, 2*g, 0, 0] # modify here
     ])
     return A
     
@@ -108,8 +108,8 @@ def get_B_lin():
     B = np.array([
         [0], # modify here
         [0], # modify here
-        [0], # modify here
-        [0]  # modify here
+        [1], # modify here
+        [1] # modify here
     ])
     return B
 
@@ -154,22 +154,22 @@ def linearization_error(x, u):
 
 # fill these states with the ones given above
 x_list = [
-    np.array([0, np.pi, 0, 0]), # modify here
-    np.array([0, np.pi, 0, 0]), # modify here
-    np.array([0, np.pi, 0, 0]), # modify here
-    np.array([0, np.pi, 0, 0]), # modify here
-    np.array([0, np.pi, 0, 0]), # modify here
-    np.array([0, np.pi, 0, 0])  # modify here
+    np.array([0, 0.99*np.pi, 0, 0]), # modify here
+    np.array([0, 0.9*np.pi, 0, 0]), # modify here
+    np.array([0, 0.85*np.pi, 0, 0]), # modify here
+    np.array([0, 0.5*np.pi, 0, 0]), # modify here
+    np.array([0, 0, 0, 0]), # modify here
+    np.array([1, np.pi, 0, 0])  # modify here
 ]
 
 # fill these inputs with the ones given above
 u_list = [
     np.array([0]), # modify here
+    np.array([-10]), # modify here
     np.array([0]), # modify here
     np.array([0]), # modify here
     np.array([0]), # modify here
-    np.array([0]), # modify here
-    np.array([0])  # modify here
+    np.array([10])  # modify here
 ]
 
 # compute linearization errors for all the points above
@@ -310,7 +310,7 @@ Out of the 6 initial states we considered, which are the states from which the L
 In the next cell write (in base zero) the indices of the states from which the system is able to recover (autograded).
 """
 
-system_recovers_from_states = [] # modify here
+system_recovers_from_states = [0,1,2,5] # modify here
 print('System recovers from states:')
 for i in system_recovers_from_states:
     print(np.around(x_list[i], decimals=2))
