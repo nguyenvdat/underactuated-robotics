@@ -115,11 +115,11 @@ To prevent divisions by zero, we defined a tolerance of $10^{-3}$ (do not modify
 
 def lyapunov_controller(x1, x2, x3):
     if np.abs(x3) <= 1e-3: # do not modify
-        u1 = 0 # modify here
-        u2 = 0 # modify here
+        u1 = -x1*np.cos(x3) # modify here
+        u2 = x2+2*x3 # modify here
     else:
-        u1 = 0 # modify here
-        u2 = 0 # modify here
+        u1 = -x1*np.cos(x3) # modify here
+        u2 = x3+(x2+x3)*np.cos(x3)*np.sin(x3)/x3 # modify here
     return u1, u2
 
 """## Wire the Block Diagram
