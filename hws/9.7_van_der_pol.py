@@ -252,9 +252,11 @@ rho_step = .01 # do not modify
 
 # implement your line-search here
 # modify here
+while is_verified(rho+rho_step):
+  rho += rho_step
 
 # set the maximum value of rho you've found with line search
-rho_method_1 = 0 # modify here
+rho_method_1 = rho # modify here
     
 # print maximum rho
 print(f'Method 1 verified rho = {rho_method_1}.')
@@ -335,10 +337,10 @@ l = prog2.NewSosPolynomial(Variables(x), l_deg)[0].ToExpression()
 rho = prog2.NewContinuousVariables(1, 'rho')[0]
 
 # write here the SOS condition described in the "Not quite there yet..." section above
-# modify here
+prog2.AddSosConstraint(x.dot(x)*(V-rho) - l*V_dot)
 
 # insert here the objective function (maximize rho)
-# modify here
+prog2.AddLinearCost(-rho)
 
 # solve program only if the lines above are filled
 if len(prog2.GetAllConstraints()) != 0:
@@ -393,7 +395,40 @@ If you have done thing correctly, `rho_method_3` should "closely match" `rho_met
 # initialize optimization problem
 prog3 = MathematicalProgram()
 
-rho_method_3 = 0 # modify here
+# SOS indeterminates
+x = prog3.NewIndeterminates(2, 'x')
+
+# Lyapunov function
+V = x.dot(P).dot(x)
+V_dot = 2*x.dot(P).dot(f(x))
+
+# degree of the polynomial lambda(x)
+# no need to change it, but if you really want to,
+# keep l_deg even and do not set l_deg greater than 10
+l_deg = 4
+assert l_deg % 2 == 0
+
+# SOS Lagrange multipliers
+l = prog3.NewFreePolynomial(Variables(x), l_deg).ToExpression()
+
+# level set as optimization variable
+rho = prog3.NewContinuousVariables(1, 'rho')[0]
+
+# write here the SOS condition described in the "Not quite there yet..." section above
+prog3.AddSosConstraint(x.dot(x)*(V-rho) - l*V_dot)
+
+# insert here the objective function (maximize rho)
+prog3.AddLinearCost(-rho)
+
+# solve program only if the lines above are filled
+if len(prog3.GetAllConstraints()) != 0:
+
+    # solve SOS program
+    result = Solve(prog3)
+
+    # get maximum rho
+    assert result.is_success()
+    rho_method_3 = result.GetSolution(rho)
 
 # print maximum rho
 print(f'Method 3 verified rho = {rho_method_3}.')
