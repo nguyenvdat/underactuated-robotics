@@ -344,7 +344,17 @@ P.s.: you might find the function [`numpy.linalg.cond`](https://docs.scipy.org/d
 
 # number of bits lost in the inversion of Hb
 # as a function of the time horizon N
-lost_bits_shooting = [np.nan for N in range(1, N_max + 1)] # modify here
+def get_cond_Hb(A, B, Q, R, QN, N, x):
+    Ab = get_Ab(A, N)
+    Bb = get_Bb(A, B, N)
+    
+    # weight block matrices
+    Qb = sp.linalg.block_diag(*([Q] * (N - 1) + [QN]))
+    Rb = sp.linalg.block_diag(*([R] * N))
+    Hb = Rb + Bb.T.dot(Qb).dot(Bb)
+    return np.log2(np.linalg.cond(Hb))
+  
+lost_bits_shooting = [get_cond_Hb(A, B, Q, R, QN, N, x0) for N in range(1, N_max + 1)] # modify here
 
 """In the following cell we wrote a function to plot your results.
 Do you see anything alarming?
@@ -504,9 +514,9 @@ def Mb_diagonal_block(A, B, Q, R):
     Ip = sp.sparse.eye(p) # modify here
     Iq = sp.sparse.eye(q) # modify here
     my_block = sp.sparse.bmat([ # modify here
-        [  Ip, None, None,   Ip, None], # modify here
-        [None, None,   Iq, None, None], # modify here
-        [None,   Ip, None, None,   Ip] # modify here
+        [  -Ip, 2*Q, None,   A.T, None], # modify here
+        [None, None,   2*R, B.T, None], # modify here
+        [None,   A, B, None,   -Ip] # modify here
         ])
     
     return my_block
@@ -658,7 +668,14 @@ To solve the sparse linear system $\mathbb{M} \mathbb{z} = \mathbb{x}_0$, use th
 # Q, R, QN; and the controller horizon N) returns the cost
 # to go of the finite-horizon LQR using direct transcription
 def get_J_star_N_transcription(A, B, Q, R, QN, N, x0):
-    return np.nan # modify here
+    p, q = B.shape
+    Mb = get_Mb(A, B, Q, R, QN, N)
+    xb0 = get_xb0(x0, p, q, N)
+    zb = spsolve(Mb, xb0)
+    xb = extract_xb_from_zb(zb, p, q, N)
+    ub = extract_ub_from_zb(zb, p, q, N)
+    J = evaluate_J(xb, ub, Q, R, QN, N)
+    return J # modify here
 
 """Here is the same plot we had for direct shooting, for a longer maximum horizon `N_max = 100`. Does it look better than the direct-shooting one?"""
 
@@ -681,7 +698,9 @@ This can be done as `Mb_dense = Mb.todense()`.
 
 # number of bits lost in the inversion of Mb
 # as a function of the time horizon N
-lost_bits_transcription = [np.nan for N in range(1, N_max + 1)] # modify here
+# print(get_Mb(A, B, Q, R, QN, 2))
+# print(np.linalg.cond(get_Mb(A, B, Q, R, QN, 5)))
+lost_bits_transcription = [np.log2(np.linalg.cond(get_Mb(A, B, Q, R, QN, N).todense())) for N in range(1, N_max + 1)] # modify here
 
 """Does this plot look better than the direct-shooting one?
 Which kind of law does this curve follow: constant, logarithmic, linear, polynomial, or exponential?
@@ -735,7 +754,7 @@ Do this by implementing the recursion above.
 def riccati_recursion(A, B, Q, R, QN, N):
     S = QN
     for n in range(N):
-        S = S # modify here
+        S = Q + A.T@S@A - A.T@S@B@np.linalg.inv(R + B.T@S@B)@B.T@S@A
     return S
 
 """Here is the same old plot of finite-horizon LQR vs infinite-horizon LQR.
