@@ -543,18 +543,29 @@ Hence, after you modify the code in the cell below, rerun the cell above to star
 # lower or equal to the rocket thrust_limit
 
 # modify here
+for t in range(time_steps):
+  # thrust_norm = np.linalg.norm(thrust[t])
+  thrust_norm = np.dot(thrust[t], thrust[t])
+  prog.AddConstraint(thrust_norm <= rocket.thrust_limit**2)
 
 # velocity limits, for all t:
 # two norm of the rocket velocity
 # lower or equal to the rocket velocity_limit
 
 # modify here
+for t in range(time_steps):
+  vel_norm = np.linalg.norm(state[t][2:])
+  prog.AddConstraint(vel_norm <= rocket.velocity_limit)
 
 # avoid collision with asteroids, for all t, for all asteroids:
 # two norm of the rocket distance from the asteroid
 # greater or equal to the asteroid orbit
 
 # modify here
+for t in range(time_steps+1):
+  for asteroid in asteroids:
+    p = universe.position_wrt_planet(state[t], asteroid.name)
+    prog.AddConstraint(np.linalg.norm(p) >= asteroid.orbit)
 
 # minimize fuel consumption, for all t:
 # add to the objective the two norm squared of the thrust
@@ -562,6 +573,10 @@ Hence, after you modify the code in the cell below, rerun the cell above to star
 # approximates the time integral of the thrust squared
 
 # modify here
+cost = 0
+for t in range(time_steps):
+  cost += time_interval * np.dot(thrust[t], thrust[t]);
+prog.AddCost(cost)
 
 """Now that we have written the optimization problem, we can solve it using the nonlinear optimization solver `Snopt`.
 
