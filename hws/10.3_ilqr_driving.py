@@ -78,7 +78,8 @@ def car_continuous_dynamics(x, u):
 def discrete_dynamics(x, u):
     dt = 0.1
     # TODO: Fill in the Euler integrator below and return the next state
-    x_next = x
+    x_d = car_continuous_dynamics(x, u)
+    x_next = x + x_d * dt
     return x_next
 
 """Given an initial state $\mathbf{x}_0$ and a guess of a control trajectory $\mathbf{u}[0:N-1]$ we roll out the state trajectory $x[0:N]$ until the time horizon $N$. Please complete the rollout function."""
@@ -86,6 +87,9 @@ def discrete_dynamics(x, u):
 def rollout(x0, u_trj):
     x_trj = np.zeros((u_trj.shape[0]+1, x0.shape[0]))
     # TODO: Define the rollout here and return the state trajectory x_trj: [N, number of states]
+    x_trj[0, :] = x0;
+    for i in range(u_trj.shape[0]):
+      x_trj[i+1, :] = discrete_dynamics(x_trj[i, :], u_trj[i, :])
     return x_trj
 
 # Debug your implementation with this example code
@@ -117,6 +121,9 @@ def cost_final(x):
 def cost_trj(x_trj, u_trj):
     total = 0.0
     # TODO: Sum up all costs
+    for i in range(u_trj.shape[0]):
+      total += cost_stage(x_trj[i, :], u_trj[i, :])
+    total += cost_final(x_trj[-1, :])
     return total
     
 # Debug your code
@@ -251,11 +258,11 @@ Find $Q_{\mathbf{x},n}$, $Q_{\mathbf{u},n}$, $Q_{\mathbf{xx},n}$, $Q_{\mathbf{ux
 
 def Q_terms(l_x, l_u, l_xx, l_ux, l_uu, f_x, f_u, V_x, V_xx):
     # TODO: Define the Q-terms here
-    Q_x = np.zeros(l_x.shape)
-    Q_u = np.zeros(l_u.shape)
-    Q_xx = np.zeros(l_xx.shape)
-    Q_ux = np.zeros(l_ux.shape)
-    Q_uu = np.zeros(l_uu.shape)
+    Q_x = l_x + f_x.T@V_x
+    Q_u = l_u + f_u.T@V_x
+    Q_xx = l_xx + f_x.T@V_xx@f_x
+    Q_ux = l_ux + f_u.T@V_xx@f_x
+    Q_uu = l_uu + f_u.T@V_xx@f_u
     return Q_x, Q_u, Q_xx, Q_ux, Q_uu
 
 """### Q-function Optimization and Optimal Linear Control Law
@@ -278,8 +285,8 @@ Solve the quadratic optimization analytically and derive equations for the feedf
 def gains(Q_uu, Q_u, Q_ux):
     Q_uu_inv = np.linalg.inv(Q_uu)
     # TOD: Implement the feedforward gain k and feedback gain K.
-    k = np.zeros(Q_u.shape)
-    K = np.zeros(Q_ux.shape)
+    k = -Q_uu_inv @ Q_u
+    K = -Q_uu_inv @ Q_ux
     return k, K
 
 """### Value Function Backward Update
@@ -300,8 +307,8 @@ Compare terms in $(\cdot) \delta \mathbf{x}[n]$ and $ 1/2 \delta \mathbf{x}[n]^T
 
 def V_terms(Q_x, Q_u, Q_xx, Q_ux, Q_uu, K, k):
     # TODO: Implement V_x and V_xx, hint: use the A.dot(B) function for matrix multiplcation.
-    V_x = np.zeros(Q_x.shape)
-    V_xx = np.zeros(Q_xx.shape)
+    V_x = Q_x + K.T@Q_u + Q_ux.T@k + K.T@Q_uu@k
+    V_xx = Q_xx + K.T@Q_ux + Q_ux.T@K + K.T@Q_uu@K
     return V_x, V_xx
 
 """### Expected Cost Reduction
@@ -320,9 +327,9 @@ def forward_pass(x_trj, u_trj, k_trj, K_trj):
     x_trj_new[0,:] = x_trj[0,:]
     u_trj_new = np.zeros(u_trj.shape)
     # TODO: Implement the forward pass here
-#     for n in range(u_trj.shape[0]):
-#         u_trj_new[n,:] = # Apply feedback law
-#         x_trj_new[n+1,:] = # Apply dynamics
+    for n in range(u_trj.shape[0]):
+        u_trj_new[n,:] = u_trj[n,:] + k_trj[n,:] + K_trj[n,:,:]@(x_trj_new[n, :] - x_trj[n, :]) # Apply feedback law
+        x_trj_new[n+1,:] = discrete_dynamics(x_trj_new[n, :], u_trj_new[n, :]) # Apply dynamics
     return x_trj_new, u_trj_new
 
 """### Backward Pass
@@ -334,17 +341,18 @@ def backward_pass(x_trj, u_trj, regu):
     K_trj = np.zeros([u_trj.shape[0], u_trj.shape[1], x_trj.shape[1]])
     expected_cost_redu = 0
     # TODO: Set terminal boundary condition here (V_x, V_xx)
-    V_x = np.zeros((x_trj.shape[1],))
-    V_xx = np.zeros((x_trj.shape[1],x_trj.shape[1]))
+    # V_x = np.zeros((x_trj.shape[1],))
+    # V_xx = np.zeros((x_trj.shape[1],x_trj.shape[1]))
+    V_x, V_xx = derivs.final(x_trj[-1, :])
     for n in range(u_trj.shape[0]-1, -1, -1):
         # TODO: First compute derivatives, then the Q-terms 
-        # l_x, l_u, l_xx, l_ux, l_uu, f_x, f_u = 
-        # Q_x, Q_u, Q_xx, Q_ux, Q_uu =
-        Q_x = np.zeros((x_trj.shape[1],))
-        Q_u = np.zeros((u_trj.shape[1],))
-        Q_xx = np.zeros((x_trj.shape[1], x_trj.shape[1]))
-        Q_ux = np.zeros((u_trj.shape[1], x_trj.shape[1]))
-        Q_uu = np.zeros((u_trj.shape[1], u_trj.shape[1]))
+        l_x, l_u, l_xx, l_ux, l_uu, f_x, f_u = derivs.stage(x_trj[n, :], u_trj[n, :])
+        Q_x, Q_u, Q_xx, Q_ux, Q_uu = Q_terms(l_x, l_u, l_xx, l_ux, l_uu, f_x, f_u, V_x, V_xx)
+        # Q_x = np.zeros((x_trj.shape[1],))
+        # Q_u = np.zeros((u_trj.shape[1],))
+        # Q_xx = np.zeros((x_trj.shape[1], x_trj.shape[1]))
+        # Q_ux = np.zeros((u_trj.shape[1], x_trj.shape[1]))
+        # Q_uu = np.zeros((u_trj.shape[1], u_trj.shape[1]))
         # We add regularization to ensure that Q_uu is invertible and nicely conditioned
         Q_uu_regu = Q_uu + np.eye(Q_uu.shape[0])*regu
         k, K = gains(Q_uu_regu, Q_u, Q_ux)
