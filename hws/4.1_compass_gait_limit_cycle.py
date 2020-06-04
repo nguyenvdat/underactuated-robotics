@@ -370,18 +370,30 @@ We suggest you to add these constraints in the given order: for us it worked fin
 
 # 1. stance foot on the ground for all times
 # modify here
+for t in range(T+1):
+    prog.AddLinearConstraint(eq(q[t,:2], np.zeros(2)))
 
 # 2. swing foot on the ground at time zero
 # modify here
+prog.AddLinearConstraint(q[0, 3] >= -2*q[0, 2])
 
 # 3. no penetration of the swing foot in the ground for all times
 # modify here
+for t in range(T+1):
+    prog.AddConstraint(swing_foot_height, lb=[0], ub=[np.inf], vars=q[t])
 
 # 4. stance-foot contact force in friction cone for all times
 # modify here
+for t in range(T):
+    prog.AddLinearConstraint(f[t, 1] >= 0)
+    prog.AddLinearConstraint(f[t, 0] >= -f[t, 1] * friction)
+    prog.AddLinearConstraint(f[t, 0] <= f[t, 1] * friction)
 
 # 5. swing-foot impulse in friction cone
 # modify here
+prog.AddLinearConstraint(imp[1] >= 0)
+prog.AddLinearConstraint(imp[0] >= -imp[1] * friction)
+prog.AddLinearConstraint(imp[0] <= imp[1] * friction)
 
 """Here we set the initial guess for our optimization problem.
 
