@@ -121,6 +121,11 @@ class RRT:
             # Don't need to modify beyond here
             # If the new_node is very close to the goal, connect it
             # directly to the goal and return the final path
+            rnd_node = self.get_random_node()
+            nearest_node = RRT.get_nearest_node(self.node_list, rnd_node)
+            new_node = self.steer(nearest_node, rnd_node)
+            if not RRT.collision(nearest_node, new_node, self.obstacle_list):
+              self.node_list.append(new_node)
             if self.dist_to_goal(self.node_list[-1].p) <= self.max_extend_length:
                 final_node = self.steer(self.node_list[-1], self.goal, self.max_extend_length)
                 if not self.collision(final_node, self.node_list[-1], self.obstacle_list):
@@ -191,6 +196,11 @@ class RRT:
         node = self.node_list[goal_ind]
         # modify here: Generate the final path from the goal node to the start node.
         # We will check that path[0] == goal and path[-1] == start
+        while True:
+          path.append(node.p)
+          if np.array_equal(node.p, self.start.p):
+            break
+          node = node.parent
         return path
 
     def draw_graph(self):
@@ -308,6 +318,13 @@ class RRTStar(RRT):
         # 2) evaluating the cost of the new_node if it had that near node as a parent,
         # 3) picking the parent resulting in the lowest cost and updating
         #    the cost of the new_node to the minimum cost.
+        for ind in near_inds:
+          parent_node = self.node_list[ind]
+          if not self.collision(parent_node, new_node, self.obstacle_list):
+            cost = self.new_cost(parent_node, new_node)
+            if cost < min_cost:
+              min_cost = cost
+              best_near_node = parent_node
         
         # Don't need to modify beyond here
         new_node.cost = min_cost
@@ -321,7 +338,12 @@ class RRTStar(RRT):
         # A) Not cause a collision and
         # B) reduce their own cost.
         # If A and B are true, update the cost and parent properties of the node.
-        
+        for ind in near_inds:
+          node = self.node_list[ind]
+          if not self.collision(new_node, node, self.obstacle_list):
+            new_cost = self.new_cost(new_node, node)
+            if new_cost < node.cost:
+              node.parent = new_node
         # Don't need to modify beyond here
         self.propagate_cost_to_leaves(new_node)
 
